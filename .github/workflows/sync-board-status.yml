@@ -1,3 +1,4 @@
+# Y클라우드 게시판 현황 자동 동기화 (30분마다)
 name: Sync Board Status
 
 on:
