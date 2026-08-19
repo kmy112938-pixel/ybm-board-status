@@ -77,9 +77,12 @@ def build_data(xlsx_path):
     return [items[i] for i in order]
 
 
+KST = datetime.timezone(datetime.timedelta(hours=9))
+
+
 def render(xlsx_path, output_path, source_label=None):
     data = build_data(xlsx_path)
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    now = datetime.datetime.now(KST).strftime("%Y-%m-%d %H:%M")
     meta = {
         "generated_at": f"{now} (KST)",
         "source_name": source_label or Path(xlsx_path).name,
