@@ -29,6 +29,20 @@ def to_iso_date(value):
     return str(value).strip()
 
 
+def to_text(value):
+    """일반 텍스트 칸(과목/학년/게시판명 등)이 실수로 날짜 등 다른 타입으로
+    입력된 경우에도 죽지 않고 문자열로 안전하게 바꾼다."""
+    if value is None:
+        return None
+    if isinstance(value, datetime.datetime):
+        if value.hour == 0 and value.minute == 0:
+            return f"{value.month}/{value.day}"
+        return value.strftime("%Y-%m-%d %H:%M")
+    if isinstance(value, datetime.date):
+        return f"{value.month}/{value.day}"
+    return str(value).strip()
+
+
 def load_items(wb):
     ws = wb["콘텐츠 현황"]
     items = {}
@@ -38,13 +52,13 @@ def load_items(wb):
             continue
         item_id, level, subject, grade, board, name, itype, count, status, last_update = row[:10]
         items[item_id] = {
-            "id": item_id,
-            "level": level,
-            "subject": subject,
-            "grade": grade,
-            "board": board,
-            "name": name,
-            "type": itype,
+            "id": to_text(item_id),
+            "level": to_text(level),
+            "subject": to_text(subject),
+            "grade": to_text(grade),
+            "board": to_text(board),
+            "name": to_text(name),
+            "type": to_text(itype),
             "count": count if isinstance(count, (int, float)) else None,
             "status": STATUS_MAP.get(status, "prep"),
             "last_update": to_iso_date(last_update),
@@ -65,8 +79,8 @@ def load_history(wb, items):
         items[item_id]["history"].append({
             "date": to_iso_date(date),
             "type": HIST_TYPE_MAP.get(kind, "edit"),
-            "action": action,
-            "who": who,
+            "action": to_text(action),
+            "who": to_text(who),
         })
 
 
@@ -90,9 +104,9 @@ def render(xlsx_path, output_path, source_label=None):
 
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
     html = template.replace(
-        "/*__BOARD_DATA_JSON__*/[]", json.dumps(data, ensure_ascii=False)
+        "/*__BOARD_DATA_JSON__*/[]", json.dumps(data, ensure_ascii=False, default=str)
     ).replace(
-        "/*__BOARD_META_JSON__*/{}", json.dumps(meta, ensure_ascii=False)
+        "/*__BOARD_META_JSON__*/{}", json.dumps(meta, ensure_ascii=False, default=str)
     )
 
     output_path = Path(output_path)
