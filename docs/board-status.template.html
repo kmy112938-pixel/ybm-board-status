@@ -137,7 +137,7 @@
   </header>
 
   <h2 class="section">과목별 최근 반영 현황</h2>
-  <p class="section-desc">각 팀에서 최근 사이트에 반영된 자료 기준입니다. (학교급·과목 순 정렬, 게시중 상태만 집계)</p>
+  <p class="section-desc">각 팀에서 최근 2주 이내 사이트에 반영한 자료 기준입니다. (학교급·과목 순 정렬, 게시중 상태만 집계)</p>
   <div class="team-grid" id="teamGrid"></div>
 
   <details open>
@@ -181,7 +181,9 @@ document.getElementById('footerLine').textContent =
 document.getElementById('listSummary').textContent =
   '게시판별 콘텐츠 목록 (' + DATA.length + '건) · 클릭하면 변경 이력이 펼쳐져요';
 
-// ---- 과목별 최근 반영 현황 카드 ----
+// ---- 과목별 최근 반영 현황 카드 (최근 2주 이내에 반영된 과목만) ----
+const RECENT_WINDOW_DAYS = 14;
+
 function buildTeamGrid(){
   const groups = new Map();
   DATA.forEach(item => {
@@ -192,19 +194,25 @@ function buildTeamGrid(){
     g.count++;
     if (item.last_update) g.dates.push(item.last_update);
   });
-  const arr = [...groups.values()].sort((a, b) => {
-    const li = LEVEL_ORDER.indexOf(a.level) - LEVEL_ORDER.indexOf(b.level);
-    return li !== 0 ? li : a.subject.localeCompare(b.subject, 'ko');
-  });
-  document.getElementById('teamGrid').innerHTML = arr.map(g => {
-    const latest = g.dates.length ? g.dates.slice().sort().slice(-1)[0] : null;
-    return `
+
+  const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - RECENT_WINDOW_DAYS);
+
+  const arr = [...groups.values()]
+    .map(g => ({ ...g, latest: g.dates.length ? g.dates.slice().sort().slice(-1)[0] : null }))
+    .filter(g => g.latest && new Date(g.latest) >= cutoff)
+    .sort((a, b) => {
+      const li = LEVEL_ORDER.indexOf(a.level) - LEVEL_ORDER.indexOf(b.level);
+      return li !== 0 ? li : a.subject.localeCompare(b.subject, 'ko');
+    });
+
+  document.getElementById('teamGrid').innerHTML = arr.length ? arr.map(g => `
       <div class="team-card">
         <div class="name">${g.subject} <small>${g.level}</small></div>
         <div class="row"><span>게시물</span><b>${g.count}건</b></div>
-        <div class="row"><span>최근 반영일</span><b>${fmtDate(latest)}</b></div>
-      </div>`;
-  }).join('');
+        <div class="row"><span>최근 반영일</span><b>${fmtDate(g.latest)}</b></div>
+      </div>`).join('') : '<div class="empty-state">최근 2주 이내 반영된 자료가 없습니다.</div>';
 }
 
 // ---- 학교급 탭 ----
