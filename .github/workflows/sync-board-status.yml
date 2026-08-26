@@ -27,14 +27,25 @@ jobs:
         run: pip install openpyxl
 
       - name: Download source spreadsheet (google sheets, shared link)
-        run: >
-          curl -sL -o /tmp/board-status-source.xlsx
-          "https://docs.google.com/spreadsheets/d/1aF5gnTNRObLexo_QvDfOWHE1YzSCNCVY/export?format=xlsx"
+        run: |
+          curl -sL -w "HTTP:%{http_code} TYPE:%{content_type} SIZE:%{size_download}\n" \
+            -o /tmp/board-status-source.xlsx \
+            "https://docs.google.com/spreadsheets/d/1aF5gnTNRObLexo_QvDfOWHE1YzSCNCVY/export?format=xlsx"
+          file /tmp/board-status-source.xlsx
+          python -c "
+          import openpyxl
+          wb = openpyxl.load_workbook('/tmp/board-status-source.xlsx', data_only=True)
+          ws = wb['콘텐츠 현황']
+          rows = [r for r in ws.iter_rows(min_row=2, values_only=True) if r and r[0]]
+          print('downloaded item count:', len(rows))
+          print('last row id:', rows[-1][0] if rows else None)
+          "
 
       - name: Generate dashboard
         id: generate
         run: |
           result=$(python scripts/generate_board_status.py /tmp/board-status-source.xlsx docs/board-status.html "Y클라우드_게시판 현황_원본데이터 (팀 공유 구글시트)")
+          echo "generate result: $result"
           echo "result=$result" >> "$GITHUB_OUTPUT"
 
       - name: Commit and push if changed
