@@ -60,3 +60,16 @@ jobs:
             git commit -m "자동 동기화: 게시판 현황 갱신 ($(date -u '+%Y-%m-%d %H:%M UTC'))"
             git push
           fi
+
+      - name: Keep schedule alive (GitHub disables schedules after 60 days without commits)
+        run: |
+          last=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          age_days=$(( (now - last) / 86400 ))
+          echo "days since last commit: $age_days"
+          if [ "$age_days" -ge 30 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "keepalive: 예약 실행 자동 비활성화 방지 ($(date -u '+%Y-%m-%d'))"
+            git push
+          fi
